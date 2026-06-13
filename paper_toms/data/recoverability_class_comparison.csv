@@ -1,5 +1,0 @@
-class,precision,L,k_perp_predicted,k_perp_empirical
-hyperbolic,float64,709.78,23.2963,17.3658
-hyperbolic,float32,88.72,4.8289,5.0987
-parabolic,float64,709.78,13719.2000,7399.8043
-parabolic,float32,88.72,1298.0000,1997.6750

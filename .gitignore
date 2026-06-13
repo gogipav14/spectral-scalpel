@@ -68,16 +68,15 @@ Thumbs.db
 *.swo
 *~
 
-# --- Repo-local development output (large; not for distribution) ---------
-reports/repro_run/
-reports/claims_audit/*.png
-reports/claims_audit/*.pdf
+# --- Repo-local development output (NOT for the public GitHub mirror) ----
+# Per project scoping: the public GitHub repo is the LIBRARY only
+# (scalpel/, tests/, CI, root metadata). The manuscript bundle ships
+# separately via the Zenodo deposit, and development reports stay
+# local. TOMS reviewers get the manuscript via the journal portal.
+reports/
+paper_toms/
 scripts/*.png
 scripts/*.pdf
-
-# (Pickle artifacts: shipped when smaller than CSV equivalent or when no
-# CSV exists; all current .pkl files in reports/claims_audit/ are < 3 KB
-# and are kept for completeness.)
 
 # --- Third-party copyrighted PDFs (not ours to redistribute) -------------
 1-s2.0-S0009250926004884-main.pdf
