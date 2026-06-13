@@ -1,0 +1,327 @@
+"""
+CFL-tuned analytical validation with grid scaling.
+
+Uses Algorithm 1 (Phase 1 + Phase 2) to set NILT parameters, then
+runs the spectral engine on grids from 32x32 to 256x256.
+
+Physics: pure diffusion  du/dt = D nabla^2 u
+Analytical: shifted Levy distribution per mode.
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import cmath
+import time
+
+from scalpel.backends import get_backend
+from scalpel.core.engine import SpectralEngine, GridParams, NILTParams
+from scalpel.core.dispersion import diffusion
+from scalpel.core.feasibility import tune_params, refine_until_accept
+
+# ── physics ─────────────────────────────────────────────────────────────
+D     = 1e-4      # diffusion coefficient [m^2/s]
+d     = 0.005     # propagation depth [m]
+w     = 0.008     # Gaussian source std-dev [m]
+t_end = 2.0       # observation window [s]
+
+# ── CFL tuning (Algorithm 1) ───────────────────────────────────────────
+# For diffusion: alpha_c = 0 (branch point at s=0)
+# Spectral radius rho ~ D/d^2 (characteristic diffusion frequency)
+alpha_c = 0.0
+C       = 1.0
+rho     = D / d**2   # = 4.0 s^-1
+
+print("="*60)
+print(" Phase 1: CFL parameter initialization")
+print("="*60)
+params = tune_params(
+    t_end=t_end,
+    alpha_c=alpha_c,
+    C=C,
+    kappa=2.0,        # T = 2*t_end -> alias tail has room to decay
+    eps_tail=1e-6,
+    N_init=512,
+    rho=rho,
+)
+print(f"  a     = {params.a:.6f}")
+print(f"  T     = {params.T:.4f} s")
+print(f"  N     = {params.N}")
+print(f"  dt    = {params.delta_t*1e3:.4f} ms")
+print(f"  t_max = {params.t_max:.4f} s")
+print(f"  a_min = {params.a_min:.6f},  a_max = {params.a_max:.4f}")
+print(f"  margin= {params.margin:.4f}")
+print(f"  feasible: {params.feasible}")
+
+print(f"\n Phase 2: Adaptive N-refinement (eps_im + N-doubling)")
+
+# Representative transfer function: DC mode (kperp=0)
+def F_dc(s):
+    gamma = cmath.sqrt(s / D)
+    if gamma.real < 0:
+        gamma = -gamma
+    return cmath.exp(-gamma * d)
+
+refined = refine_until_accept(
+    F_dc, params, t_end,
+    eps_im_max=1e-2, eps_conv=1e-2, N_max=16384,
+    t_eval_min=0.01,
+)
+print(f"  N refined: {params.N} -> {refined.N}")
+print(f"  dt refined: {refined.delta_t*1e3:.4f} ms")
+
+# ── backend ─────────────────────────────────────────────────────────────
+backend = get_backend()
+print(f"\nBackend: {backend.name}")
+
+# ── helper: analytical reference via per-mode Levy + IFFT ───────────────
+a_levy = d / np.sqrt(D)
+
+def run_one_grid(Nx, dx):
+    """Run engine + analytical on one grid, return metrics."""
+    Ny = Nx
+    dy = dx
+    grid = GridParams(Nx=Nx, Ny=Ny, dx=dx, dy=dy)
+    nilt_p = NILTParams(a=refined.a, T=refined.T, N=refined.N)
+
+    # Source
+    x = (np.arange(Nx) - Nx // 2) * dx
+    y = (np.arange(Ny) - Ny // 2) * dy
+    X, Y = np.meshgrid(x, y, indexing="ij")
+    source_np = np.exp(-(X**2 + Y**2) / (2 * w**2))
+    source = backend.array(source_np, dtype=complex)
+
+    # Dispersion
+    def disp_fn(s, KX, KY, b):
+        return diffusion(s, KX, KY, D, b)
+
+    engine = SpectralEngine(disp_fn, backend)
+
+    # Warmup
+    _ = engine.forward(source, d, grid, nilt_p)
+
+    # Timed run
+    t0 = time.perf_counter()
+    field, t_arr = engine.forward(source, d, grid, nilt_p)
+    if backend.name == "jax":
+        field.block_until_ready()
+    elif backend.name == "torch":
+        import torch; torch.cuda.synchronize()
+    wall = time.perf_counter() - t0
+
+    field_np = backend.to_numpy(field)
+    t_np = backend.to_numpy(t_arr)
+    Nt = len(t_np)
+
+    # Analytical
+    kx_arr = np.fft.fftfreq(Nx, dx) * 2 * np.pi
+    ky_arr = np.fft.fftfreq(Ny, dy) * 2 * np.pi
+    KX_k, KY_k = np.meshgrid(kx_arr, ky_arr, indexing="ij")
+    kperp_sq = KX_k**2 + KY_k**2
+    S_hat = np.fft.fft2(source_np)
+
+    field_exact = np.zeros_like(field_np)
+    for i, tv in enumerate(t_np):
+        if tv <= 0:
+            continue
+        h = (a_levy / (2 * np.sqrt(np.pi * tv**3))
+             * np.exp(-a_levy**2 / (4 * tv) - D * kperp_sq * tv))
+        field_exact[:, :, i] = np.real(np.fft.ifft2(S_hat * h))
+
+    # Metrics per time step
+    l2_err = np.array([np.sqrt(np.mean((field_np[:,:,i] - field_exact[:,:,i])**2))
+                       for i in range(Nt)])
+    l2_ref = np.array([np.sqrt(np.mean(field_exact[:,:,i]**2))
+                       for i in range(Nt)])
+
+    peak_ref = l2_ref.max()
+    sig = l2_ref > 0.01 * peak_ref
+    rel_l2 = np.full(Nt, np.nan)
+    rel_l2[sig] = l2_err[sig] / l2_ref[sig]
+
+    return {
+        "Nx": Nx, "dx": dx, "wall_ms": wall * 1e3,
+        "N_modes": Nx * Ny,
+        "field": field_np, "field_exact": field_exact,
+        "t": t_np, "l2_err": l2_err, "l2_ref": l2_ref, "rel_l2": rel_l2,
+        "sig_mask": sig,
+        "X": X, "Y": Y,
+        "peak_rel_l2": np.nanmin(rel_l2[sig]) if np.any(sig) else np.nan,
+        "mean_rel_l2_early": np.nanmean(rel_l2[sig & (t_np < 0.5*t_end)])
+            if np.any(sig & (t_np < 0.5*t_end)) else np.nan,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Grid scaling study
+# ═══════════════════════════════════════════════════════════════════════
+configs = [
+    (32,  0.002),    # 32x32,   2mm spacing, L=64mm
+    (64,  0.001),    # 64x64,   1mm spacing, L=64mm
+    (96,  0.001),    # 96x96,   1mm spacing, L=96mm
+    (128, 0.001),    # 128x128, 1mm spacing, L=128mm  (max for 8GB VRAM)
+]
+
+results = []
+print(f"\n{'='*60}")
+print(f" Grid scaling study  (N_NILT = {refined.N})")
+print(f"{'='*60}")
+print(f" {'Grid':>10s}  {'Modes':>8s}  {'Wall [ms]':>10s}  "
+      f"{'Rel L2 peak':>12s}  {'Rel L2 mean':>12s}")
+print(f" {'-'*10}  {'-'*8}  {'-'*10}  {'-'*12}  {'-'*12}")
+
+for Nx, dx_val in configs:
+    r = run_one_grid(Nx, dx_val)
+    results.append(r)
+    print(f" {Nx:>4d}x{Nx:<4d}  {r['N_modes']:>8d}  {r['wall_ms']:>10.2f}  "
+          f"{r['peak_rel_l2']:>12.2e}  {r['mean_rel_l2_early']:>12.2e}")
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Parsable data summary
+# ═══════════════════════════════════════════════════════════════════════
+print(f"\n{'Grid':>10s}  {'Peak relL2':>12s}  {'Mean relL2':>12s}  {'Wall [ms]':>10s}  {'N_modes':>8s}")
+print("-"*60)
+for r in results:
+    print(f" {r['Nx']:>4d}x{r['Nx']:<4d}  {r['peak_rel_l2']:>12.3e}  "
+          f"{r['mean_rel_l2_early']:>12.3e}  {r['wall_ms']:>10.1f}  {r['N_modes']:>8d}")
+
+# Per-grid rel_l2 at key time points
+print(f"\nRel L2 at specific times (for panel c verification):")
+print(f"{'Grid':>10s}  {'t=100ms':>12s}  {'t=500ms':>12s}  {'t=1000ms':>12s}  {'t=1500ms':>12s}")
+for r in results:
+    vals = []
+    for t_check in [0.1, 0.5, 1.0, 1.5]:
+        idx = np.argmin(np.abs(r["t"] - t_check))
+        v = r["rel_l2"][idx] if not np.isnan(r["rel_l2"][idx]) else -1
+        vals.append(v)
+    print(f" {r['Nx']:>4d}x{r['Nx']:<4d}  " + "  ".join(f"{v:>12.3e}" if v > 0 else f"{'NaN':>12s}" for v in vals))
+
+# ═══════════════════════════════════════════════════════════════════════
+#  FIGURE  (2 rows x 3 cols)
+# ═══════════════════════════════════════════════════════════════════════
+fig = plt.figure(figsize=(17, 10))
+gs = fig.add_gridspec(2, 3, hspace=0.35, wspace=0.35,
+                      height_ratios=[1.1, 1])
+
+# ── (a) 3D surface at peak, largest grid ─────────────────────────────
+r_big = results[-1]
+t_big = r_big["t"]
+cx, cy = r_big["Nx"]//2, r_big["Nx"]//2
+center = r_big["field"][cx, cy, :]
+# Only search for peak within the physical observation window [0, t_end]
+valid = (t_big > 0.002) & (t_big <= t_end)
+peak_idx = np.argmax(np.where(valid, center, 0))
+t_snap = t_big[peak_idx]
+
+ax3d = fig.add_subplot(gs[0, 0], projection="3d")
+Z = r_big["field"][:, :, peak_idx]
+ax3d.plot_surface(r_big["X"]*1e3, r_big["Y"]*1e3, Z,
+                  cmap=cm.viridis, linewidth=0, antialiased=True, alpha=0.9,
+                  rcount=80, ccount=80)
+ax3d.set_xlabel("x [mm]", fontsize=8)
+ax3d.set_ylabel("y [mm]", fontsize=8)
+ax3d.set_zlabel("u", fontsize=8)
+ax3d.set_title(f"(a) {r_big['Nx']}x{r_big['Nx']} at t={t_snap*1e3:.1f} ms",
+               fontsize=10)
+ax3d.view_init(elev=28, azim=-55)
+
+# ── (b) Center waveform overlay (largest grid) ──────────────────────
+ax_b = fig.add_subplot(gs[0, 1])
+t_ms = t_big * 1e3
+cut = t_ms < t_end * 1e3
+pm = (t_ms > 1) & cut
+c_exact = r_big["field_exact"][cx, cy, :]
+ax_b.plot(t_ms[pm], c_exact[pm], "k-", lw=2, label="Analytical")
+ax_b.plot(t_ms[pm], center[pm], "r--", lw=1.2, label="Engine",
+          dashes=(5, 2))
+ax_b.set_xlabel("Time [ms]")
+ax_b.set_ylabel("u(0,0,d,t)")
+ax_b.set_title(f"(b) Center waveform ({r_big['Nx']}x{r_big['Nx']})", fontsize=10)
+ax_b.legend(fontsize=9)
+ax_b.grid(True, alpha=0.25)
+
+# ── (c) Relative L2 for all grids ───────────────────────────────────
+ax_c = fig.add_subplot(gs[0, 2])
+colors = ["C0", "C1", "C2", "C3"]
+for i, r in enumerate(results):
+    t_ms_i = r["t"] * 1e3
+    sm = r["sig_mask"] & (t_ms_i > 1) & (t_ms_i < t_end*1e3)
+    ax_c.semilogy(t_ms_i[sm], r["rel_l2"][sm], color=colors[i], lw=1.2,
+                  label=f"{r['Nx']}x{r['Nx']}")
+ax_c.axhline(1e-2, color="red", ls="--", lw=0.7, alpha=0.6, label="1%")
+ax_c.axhline(1e-3, color="orange", ls="--", lw=0.7, alpha=0.6, label="0.1%")
+ax_c.set_xlabel("Time [ms]")
+ax_c.set_ylabel("Relative L$_2$")
+ax_c.set_title("(c) Relative L$_2$ error vs time", fontsize=10)
+ax_c.legend(fontsize=8, ncol=2)
+ax_c.grid(True, which="both", alpha=0.25)
+ax_c.set_ylim(1e-8, 1e0)
+
+# ── (d) Absolute L2 + signal for all grids ──────────────────────────
+ax_d = fig.add_subplot(gs[1, 0])
+for i, r in enumerate(results):
+    t_ms_i = r["t"] * 1e3
+    pm_i = (t_ms_i > 1) & (t_ms_i < t_end*1e3)
+    ax_d.semilogy(t_ms_i[pm_i], r["l2_err"][pm_i], color=colors[i], lw=1.2,
+                  label=f"{r['Nx']}x{r['Nx']}")
+    ax_d.semilogy(t_ms_i[pm_i], r["l2_ref"][pm_i], color=colors[i], lw=0.6,
+                  ls=":", alpha=0.5)
+ax_d.set_xlabel("Time [ms]")
+ax_d.set_ylabel("L$_2$ norm")
+ax_d.set_title("(d) Abs L$_2$ error (solid) vs signal (dotted)", fontsize=10)
+ax_d.legend(fontsize=8)
+ax_d.grid(True, which="both", alpha=0.25)
+
+# ── (e) Wall time vs grid size ───────────────────────────────────────
+ax_e = fig.add_subplot(gs[1, 1])
+Ns = [r["N_modes"] for r in results]
+walls = [r["wall_ms"] for r in results]
+ax_e.loglog(Ns, walls, "ko-", lw=2, ms=7)
+for r in results:
+    ax_e.annotate(f"  {r['Nx']}x{r['Nx']}\n  {r['wall_ms']:.1f} ms",
+                  (r["N_modes"], r["wall_ms"]), fontsize=8)
+# Reference scaling lines anchored at LAST point (GPU saturated)
+N_ref = np.array([Ns[0], Ns[-1]])
+w_last = walls[-1]
+N_last = Ns[-1]
+ax_e.loglog(N_ref, w_last * (N_ref / N_last), "r--", lw=0.8,
+            alpha=0.5, label="$O(N)$ from 128$^2$")
+ax_e.loglog(N_ref,
+            w_last * (N_ref / N_last) * np.log2(N_ref + 1) / np.log2(N_last + 1),
+            "b--", lw=0.8, alpha=0.5, label="$O(N \\log N)$ from 128$^2$")
+ax_e.set_xlabel("Number of spatial modes (N$_x$ x N$_y$)")
+ax_e.set_ylabel("Wall time [ms]")
+ax_e.set_title("(e) GPU timing vs grid size", fontsize=10)
+ax_e.legend(fontsize=8)
+ax_e.grid(True, which="both", alpha=0.25)
+
+# ── (f) Peak relative L2 vs grid size ───────────────────────────────
+ax_f = fig.add_subplot(gs[1, 2])
+peak_errs = [r["peak_rel_l2"] for r in results]
+mean_errs = [r["mean_rel_l2_early"] for r in results]
+Nx_list = [r["Nx"] for r in results]
+ax_f.semilogy(Nx_list, peak_errs, "ko-", lw=2, ms=7, label="Best rel L$_2$")
+ax_f.semilogy(Nx_list, mean_errs, "s--", color="C1", lw=1.5, ms=6,
+              label="Mean rel L$_2$ (t<1s)")
+ax_f.axhline(1e-2, color="red", ls="--", lw=0.7, alpha=0.5)
+ax_f.axhline(1e-3, color="orange", ls="--", lw=0.7, alpha=0.5)
+ax_f.set_xlabel("Grid size (N$_x$)")
+ax_f.set_ylabel("Relative L$_2$")
+ax_f.set_title("(f) Accuracy vs grid size", fontsize=10)
+ax_f.set_xticks(Nx_list)
+ax_f.legend(fontsize=8)
+ax_f.grid(True, which="both", alpha=0.25)
+ax_f.set_ylim(1e-8, 1e0)
+
+fig.suptitle(
+    f"CFL-tuned spectral scalpel — diffusion benchmark\n"
+    f"D={D:.0e} m$^2$/s,  d={d*1e3:.0f} mm,  w={w*1e3:.0f} mm,  "
+    f"a={refined.a:.4f},  T={refined.T:.1f} s,  "
+    f"N$_{{\\rm NILT}}$={refined.N}",
+    fontsize=11, y=1.01,
+)
+
+out = "scripts/analytical_validation.png"
+fig.savefig(out, dpi=200, bbox_inches="tight")
+print(f"\nSaved -> {out}")
+plt.close(fig)

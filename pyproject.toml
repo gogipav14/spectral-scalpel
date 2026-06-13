@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spectral-scalpel"
+version = "0.2.0"
+description = "Multi-backend FFT-NILT primitive for spectral slab PDE solvers"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [{name = "Gorgi Pavlov", email = "gop214@lehigh.edu"}]
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+jax = ["jax[cuda13]>=0.4.20"]
+torch = ["torch>=2.0"]
+viz = ["matplotlib>=3.7"]
+mpmath = ["mpmath>=1.3"]
+julia = ["julia>=0.6"]
+dev = [
+    "pytest>=7.0",
+    "pytest-xdist",
+    "mpmath>=1.3",
+    "matplotlib>=3.7",
+]
+all = ["spectral-scalpel[jax,torch,viz,mpmath,dev]"]
+
+[project.urls]
+Homepage = "https://doi.org/10.5281/zenodo.19834321"
+Source = "https://doi.org/10.5281/zenodo.19834321"
+
+[tool.setuptools.packages.find]
+include = ["scalpel*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,6 @@
+k_perp_over_k0,regime,abs_H_analytic,abs_H_minus_sign,abs_H_plus_sign,rel_err_minus_sign,rel_err_plus_sign
+0.0,propagating,1.0,1.0,1.0,0.0,0.0
+0.5,propagating,1.0,1.0,1.0,0.0,0.0
+0.9000000000000001,propagating,1.0,1.0,1.0,0.0,0.0
+1.2,evanescent,0.4990179780963418,1.0,0.4990179780963419,1.0039358177330784,2.2248156847183047e-16
+2.0,evanescent,0.16282894744818358,1.0,0.16282894744818358,5.141414138405741,0.0

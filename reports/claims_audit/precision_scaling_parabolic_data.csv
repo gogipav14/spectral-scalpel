@@ -1,0 +1,3 @@
+precision,L,k_perp_predicted,k_perp_empirical_1pct,ratio_vs_f64
+float64,709.7827,13719.3438,nan,nan
+float32,88.7228,1298.1458,1370.5888,nan

@@ -1,0 +1,56 @@
+\documentclass[11pt]{letter}
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage{hyperref}
+
+\signature{Gorgi Pavlov, PhD}
+\address{Gorgi Pavlov \\ Chemical and Biomolecular Engineering \\ Lehigh University \\ Bethlehem, PA 18015 \\ \href{mailto:gop214@lehigh.edu}{gop214@lehigh.edu}}
+
+\begin{document}
+
+\begin{letter}{Editor-in-Chief \\ ACM Transactions on Mathematical Software}
+
+\opening{Dear Editor,}
+
+I am pleased to submit the enclosed manuscript, \emph{``\textsc{scalpel}: A multi-backend FFT-NILT primitive for spectral slab PDE solvers, with class-dependent finite-precision auto-tuning''}, for consideration by ACM TOMS.
+
+\medskip\noindent\textbf{What is submitted.}
+The manuscript presents \textsc{scalpel}, an open-source Apache-2.0 Python library that ships a single batched FFT-accelerated numerical inverse Laplace transform (NILT) primitive as a reusable kernel for spectral slab PDE solvers. The library targets a concrete gap in scientific Python: there is no portable, multi-backend, GPU-aware FFT-NILT primitive with built-in finite-precision parameter auto-tuning that downstream solvers can drop in without re-deriving the Bromwich-contour tuning. \textsc{scalpel} fills that gap, running unchanged across NumPy, PyTorch, JAX, and Julia on both CPU and GPU, with four physics-domain plugins shipped out of the box (lossy Maxwell, preparative chromatography, thermoviscous acoustics, and elastodynamics) plus a fractional Caputo single-term stress test.
+
+\medskip\noindent\textbf{What is new.}
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item A portable scientific-Python library exposing a batched FFT-NILT primitive at $\mathcal{O}(N_x N_y N_{\mathrm{NILT}}\log N_{\mathrm{NILT}})$ cost, with a twenty-five-callable public API spread across six modules: bundled physics propagators, memory-bounded chunked dispatch over the transverse grid, an introspection / diagnostics layer that exposes the auto-tuner's decisions, a parameter-sweep harness, a validation API for matched-precision comparison against external references, and a configuration serializer for reproducible runs. A single-file dispersion-class plugin pattern adds new physics in $\sim$80--150 lines per domain.
+\item A multi-backend dispatcher built on top of the Python Array API specification, supporting NumPy, PyTorch, JAX, and Julia (via PyJulia), with a documented subprocess sidecar pattern for benchmarking JAX CPU vs.\ GPU in one process.
+\item Class-dependent finite-precision parameter auto-tuning: two closed-form bounds on the largest transverse wavenumber the method can resolve at finite precision, one per dispersion class (telegrapher-type and diffusion-type), shipped as the \texttt{feasibility} module. Theorems 4.1 and 4.2 of the manuscript supply the derivation; users invoke a single API call.
+\item An eight backend $\times$ device wall-clock benchmark on a single workstation with a consumer GPU. Speedup over 3D Yee FDTD on the telegrapher class spans $8$--$153\times$ (high end on PyTorch CPU, GPU rows $27$--$121\times$); speedup over an explicit-time FTCS+L1 baseline on fractional Caputo spans $12$--$394\times$ (high end on CuPy GPU, remaining GPU rows $19$--$300\times$). Per-row data ship as a CSV in the reproducibility archive.
+\item A transform-domain head-to-head establishing that the speedup reflects FFT amortization across modes (the batched FFT-NILT is $\sim 5\times$ faster than an optimized de Hoog inversion and $\sim 13\times$ faster than fixed Talbot at matched accuracy on the dense-grid many-mode workload), not a comparison against weak baselines.
+\item Accuracy anchored against a \texttt{mpmath} 50-digit Talbot ground-truth, matching to $8 \times 10^{-4}$ relative error at float64.
+\item A complete reproducibility pipeline (Apache-2.0 source, Zenodo archive, \texttt{CITATION.cff}, regression tests across all backends, one-command reproduction script, GitHub Actions CI matrix spanning three OSes $\times$ four Python versions plus per-backend extras, and a benchmark-methodology section in the article documenting matched-accuracy comparison and baseline parameter choices) compliant with the ACM Artifact Available checklist.
+\end{itemize}
+
+\medskip\noindent\textbf{Why ACM TOMS specifically.}
+The library is the contribution. The mathematical results (the dispersion-class structure, the finite-precision feasibility theorems) exist to back the parameter-selection module that ships with \textsc{scalpel}; they are not the lead claim. ACM TOMS is the natural venue for credit-allocation of numerical software with this depth of validation and reproducibility infrastructure --- in particular, the manuscript is designed to map cleanly onto ACM's Artifact Available badge requirements, with a filled-in checklist included in the reproducibility archive.
+
+\medskip\noindent\textbf{Reproducibility.}
+All source, raw benchmark data (CSV), mpmath ground-truth reference data, figure-generation scripts, and the regression test suite spanning all four backends and the four physics domains are deposited at \href{https://doi.org/10.5281/zenodo.20682437}{doi:10.5281/zenodo.20682437} under the Apache-2.0 license; a snapshot accompanies the submission. The ACM Artifact Available checklist is filled in at \texttt{reproducibility/acm\_artifact\_checklist.md}. We respectfully request consideration for the \textbf{ACM Artifact Available} badge.
+
+\medskip\noindent\textbf{Suggested reviewers.} The following experts span the numerical-software and transform-domain communities the paper touches, and the author has no association with any of them within the past 48 months:
+\begin{itemize}\setlength{\itemsep}{2pt}
+\item \textbf{Bradley E.\ Treeby} (University College London, \href{mailto:b.treeby@ucl.ac.uk}{b.treeby@ucl.ac.uk}) --- lead author of $k$-Wave; expert on portable scientific PDE software with multi-platform support, and the natural reviewer for the acoustic-physics module.
+\item \textbf{Kristopher L.\ Kuhlman} (Sandia National Laboratories, \href{mailto:klkuhlm@sandia.gov}{klkuhlm@sandia.gov}) --- inverse-Laplace algorithms for Laplace-space numerical methods (Kuhlman 2013), and a natural reviewer for the NILT primitive and parameter auto-tuner.
+\item \textbf{Roberto Garrappa} (University of Bari, \href{mailto:roberto.garrappa@uniba.it}{roberto.garrappa@uniba.it}) --- maintainer of the canonical Mittag-Leffler-evaluation library; the natural reviewer for the fractional Caputo stress test.
+\item \textbf{J.\ A.\ C.\ Weideman} (Stellenbosch University, \href{mailto:weideman@sun.ac.za}{weideman@sun.ac.za}) --- Talbot contour optimization for numerical inverse Laplace transforms (Weideman 2006), cited here as a fixed-Talbot baseline.
+\item \textbf{Christopher Rackauckas} (MIT / SciML, \href{mailto:crackauc@mit.edu}{crackauc@mit.edu}) --- multi-backend scientific computing in Julia (DifferentialEquations.jl, SciML ecosystem); the natural reviewer for the multi-backend dispatcher architecture.
+\item \textbf{Stefan Behnel} (lxml; Cython) or another Array-API-consortium maintainer --- portability layer expert who can speak to the Array API dispatch pattern.
+\end{itemize}
+The author has no preferred excluded reviewers.
+
+\medskip\noindent\textbf{Use of AI tools.} The manuscript includes a statement on the use of AI tools, with author verification of all results, in accordance with ACM's authorship policy; the author assumes responsibility for all content.
+
+\medskip\noindent\textbf{Competing interests.} The author declares no competing interests.
+
+\medskip\noindent\textbf{Prior submission.} This manuscript has not been published or submitted for publication elsewhere. The previously published Chem.\ Eng.\ Sci.\ paper (Vol.~328, 123776, 2026; \href{https://doi.org/10.1016/j.ces.2026.123776}{doi:10.1016/j.ces.2026.123776}) supplies the scalar NILT parameter-selection rules used by the auto-tuner and is cited as prior art.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}

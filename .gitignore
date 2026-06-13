@@ -1,0 +1,112 @@
+# =========================================================================
+# scalpel .gitignore
+# =========================================================================
+# This file controls what gets pushed to the public GitHub mirror. The
+# guiding principle: ship the library, the tests, the CI, the TOMS
+# manuscript bundle, and the reproducibility scripts. Everything else
+# (session state, secrets, third-party PDFs, prior-draft directories,
+# build artifacts) is excluded.
+
+# --- Python build artifacts ----------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+spectral_scalpel.egg-info/
+dist/
+build/
+.eggs/
+*.so
+*.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.tox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- LaTeX build artifacts -----------------------------------------------
+*.aux
+*.log
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.out
+*.thm
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.idx
+*.ilg
+*.ind
+*.run.xml
+*.bcf
+*.cut
+
+# --- Session state / IDE / secrets (NEVER push) --------------------------
+.claude/
+.cursor/
+.aider*
+.env
+.env.*
+*.key
+*.pem
+secrets*
+credentials*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Repo-local development output (large; not for distribution) ---------
+reports/repro_run/
+reports/claims_audit/*.png
+reports/claims_audit/*.pdf
+scripts/*.png
+scripts/*.pdf
+
+# (Pickle artifacts: shipped when smaller than CSV equivalent or when no
+# CSV exists; all current .pkl files in reports/claims_audit/ are < 3 KB
+# and are kept for completeness.)
+
+# --- Third-party copyrighted PDFs (not ours to redistribute) -------------
+1-s2.0-S0009250926004884-main.pdf
+**/literature/
+
+# --- Prior-draft / parallel-paper directories (NOT part of this submission) ----
+# Each of these was an earlier or parallel manuscript; the public TOMS
+# release ships only paper_toms/ as the manuscript bundle. The other
+# directories remain in the private working copy.
+paper/
+paper2/
+paper2_sisc/
+paper_pnas/
+paper_sisc/
+paper_sisc_v2/
+paper_v1_preNCSrevision/
+nonlinear/
+notebooks/
+science_submission.tex
+nl_nilt_paper.tex
+
+# --- Template repos (vendored, not our code) -----------------------------
+PNAS_template/
+acmart-primary/
+
+# --- Zenodo staging (large zip, not for git) ----------------------------
+paper_toms/zenodo_v2_staging/scalpel-toms-v2.zip
+paper_toms/zenodo_v2_staging/code.zip
+
+# --- Misc local artifacts ------------------------------------------------
+texput.log
+*.local
