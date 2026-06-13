@@ -12,6 +12,7 @@ from . import config
 from . import diagnose
 from . import sweep
 from . import validate
+from .core import dispersion
 
 from .api import (
     MaxwellParams,
@@ -43,6 +44,7 @@ __all__ = [
     "chunked",
     "config",
     "diagnose",
+    "dispersion",
     "sweep",
     "validate",
     # Physics + core propagation

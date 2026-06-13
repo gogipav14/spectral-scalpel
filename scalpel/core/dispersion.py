@@ -7,11 +7,95 @@ wavenumbers. All functions operate on broadcastable arrays for batched
 GPU evaluation.
 
 Branch cut convention: Re(gamma_z) >= 0 for physical attenuation.
+
+Plugin registry (``@register``) lets users add new physics with a
+single decorator; the registered ``dispersion_class`` tag routes the
+auto-tuner to the right finite-precision feasibility cutoff
+(see ``scalpel.core.feasibility``).
 """
 
 from __future__ import annotations
 
 import math
+import warnings
+from typing import Callable, Optional
+
+
+# Plugin registry --------------------------------------------------------
+
+_REGISTRY: dict = {}
+_CLASS_REGISTRY: dict = {}
+
+_VALID_CLASSES = {"telegrapher", "diffusion", "fractional", None}
+
+
+def register(name: str, dispersion_class: Optional[str] = None) -> Callable:
+    """Decorator: register a dispersion callable in the global registry.
+
+    Parameters
+    ----------
+    name : str
+        Lookup key for ``scalpel.dispersion.get(name)`` and for the
+        auto-tuner's routing.
+    dispersion_class : {'telegrapher', 'diffusion', 'fractional', None}
+        Routing tag the parameter-selection module uses to pick the
+        appropriate finite-precision cutoff:
+        ``'telegrapher'`` -> Proposition 4.1 (right-half-plane branch);
+        ``'diffusion'`` -> Proposition 4.2 (contour-origin underflow);
+        ``'fractional'`` -> Proposition 4.2 at user-supplied alpha;
+        ``None`` -> conservative fallback (small kpmax, modest N_NILT),
+        with a runtime ``UserWarning``.
+
+    Returns
+    -------
+    Decorator that registers the function and returns it unchanged.
+
+    Examples
+    --------
+    >>> from scalpel.core.dispersion import register, safe_sqrt
+    >>> @register('my_pde', dispersion_class='telegrapher')
+    ... def my_dispersion(s, KX, KY, A, B, chi, backend):
+    ...     return safe_sqrt(A + B*s + chi*(KX**2 + KY**2), backend)
+    """
+    if dispersion_class not in _VALID_CLASSES:
+        raise ValueError(
+            f"dispersion_class must be one of {sorted(c for c in _VALID_CLASSES if c)} "
+            f"or None; got {dispersion_class!r}"
+        )
+
+    def decorator(fn: Callable) -> Callable:
+        if name in _REGISTRY and _REGISTRY[name] is not fn:
+            warnings.warn(
+                f"Overwriting dispersion registration for {name!r}",
+                stacklevel=2,
+            )
+        _REGISTRY[name] = fn
+        _CLASS_REGISTRY[name] = dispersion_class
+        if dispersion_class is None:
+            warnings.warn(
+                f"Dispersion {name!r} registered without dispersion_class tag; "
+                f"the auto-tuner will fall back to conservative defaults.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return fn
+
+    return decorator
+
+
+def get(name: str) -> Callable:
+    """Look up a registered dispersion by name. KeyError if absent."""
+    return _REGISTRY[name]
+
+
+def get_class(name: str) -> Optional[str]:
+    """Return the dispersion_class tag registered for ``name``, or None."""
+    return _CLASS_REGISTRY.get(name)
+
+
+def registered_names() -> list:
+    """List all currently registered dispersion names."""
+    return sorted(_REGISTRY)
 
 # Physical constants
 MU_0 = 4e-7 * math.pi       # Vacuum permeability [H/m]
@@ -44,6 +128,7 @@ def safe_sqrt(z, backend):
     return r * sign
 
 
+@register('maxwell', dispersion_class='telegrapher')
 def maxwell_lossy(s, KX, KY, sigma, epsilon_r, backend):
     """Dispersion relation for lossy Maxwell's equations.
 
@@ -72,6 +157,7 @@ def maxwell_lossy(s, KX, KY, sigma, epsilon_r, backend):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('acoustic', dispersion_class='telegrapher')
 def damped_acoustic(s, KX, KY, c, nu, backend):
     """Dispersion relation for damped acoustic waves.
 
@@ -99,6 +185,7 @@ def damped_acoustic(s, KX, KY, c, nu, backend):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('chromatography', dispersion_class='diffusion')
 def convection_diffusion_cylindrical(s, KR, v, Dz, Dr, backend):
     """Dispersion relation for convection-diffusion in cylindrical geometry.
 
@@ -132,6 +219,7 @@ def convection_diffusion_cylindrical(s, KR, v, Dz, Dr, backend):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('elastic_pwave', dispersion_class='telegrapher')
 def elastic_pwave(s, KX, KY, c_p, rho, eta_p=0.0, eta_s=0.0, backend=None):
     """P-wave potential dispersion from the Helmholtz decomposition of Navier.
 
@@ -155,6 +243,7 @@ def elastic_pwave(s, KX, KY, c_p, rho, eta_p=0.0, eta_s=0.0, backend=None):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('elastic_swave', dispersion_class='telegrapher')
 def elastic_swave(s, KX, KY, c_s, rho, eta_s=0.0, backend=None):
     """S-wave potential dispersion from the Helmholtz decomposition of Navier.
 
@@ -175,6 +264,7 @@ def elastic_swave(s, KX, KY, c_s, rho, eta_s=0.0, backend=None):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('diffusion', dispersion_class='diffusion')
 def diffusion(s, KX, KY, D, backend):
     """Dispersion relation for the heat/diffusion equation.
 
@@ -209,6 +299,7 @@ def diffusion(s, KX, KY, D, backend):
     return safe_sqrt(gamma_sq, backend)
 
 
+@register('subdiffusion_caputo', dispersion_class='fractional')
 def subdiffusion_caputo(s, KX, KY, D, alpha, backend):
     """Dispersion relation for fractional Caputo subdiffusion.
 
