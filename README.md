@@ -5,17 +5,18 @@ batched FFT-accelerated numerical inverse Laplace transform (NILT)
 primitive for spectral slab PDE solvers, with class-dependent
 finite-precision parameter auto-tuning.
 
-See `paper_toms/article.pdf` for the manuscript that accompanies this
-release.
+Runs across NumPy, PyTorch, JAX, and (via reference wrapper) CuPy and
+Julia on CPU and GPU. See `paper_toms/article.pdf` for the manuscript
+that accompanies this release.
 
 ## Install
 
 ```bash
 pip install -e .                          # NumPy only
-pip install -e ".[torch]"                  # adds PyTorch backend
-pip install -e ".[jax]"                    # adds JAX backend
-pip install -e ".[mpmath]"                 # adds the 50-digit reference path
-pip install -e ".[all]"                    # everything except julia/CUDA extras
+pip install -e ".[torch]"                 # adds PyTorch backend
+pip install -e ".[jax]"                   # adds JAX backend
+pip install -e ".[mpmath]"                # adds the 50-digit reference path
+pip install -e ".[all]"                   # everything except julia/CUDA extras
 ```
 
 ## Quick start
@@ -44,7 +45,9 @@ bash paper_toms/reproducibility/reproduce.sh
 ```
 
 The script regenerates the CSVs in `reports/repro_run/` and diffs
-them against the archived copies in `paper_toms/data/`.
+them against the archived copies in `paper_toms/data/`. Measured
+end-to-end wall time: 21 s CPU-only on Intel Core Ultra 5 225F /
+32 GB / WSL2 / Python 3.12.3.
 
 ## License
 
@@ -55,4 +58,4 @@ Apache-2.0. See `LICENSE`.
 If you use this software or refer to the manuscript, please cite via
 `CITATION.cff` (the GitHub "Cite this repository" button picks it up
 automatically). The reproducibility archive is at
-[doi:10.5281/zenodo.19834321](https://doi.org/10.5281/zenodo.19834321).
+[doi:10.5281/zenodo.20682437](https://doi.org/10.5281/zenodo.20682437).
