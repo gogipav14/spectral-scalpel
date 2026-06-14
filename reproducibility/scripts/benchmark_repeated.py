@@ -129,7 +129,9 @@ def summarize(long_rows: list) -> list:
 
 
 def main():
-    n_outer = int(sys.argv[1]) if len(sys.argv) > 1 else 10
+    # 15 reps matches the manuscript's reported median+IQR campaign
+    # (Table 2). CLI override is honored if a different count is needed.
+    n_outer = int(sys.argv[1]) if len(sys.argv) > 1 else 15
     print(f"Running multi-backend benchmark {n_outer} times...")
     long_rows = []
     for rep in range(n_outer):

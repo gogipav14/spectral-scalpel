@@ -76,21 +76,24 @@ fail() { printf '[reproduce] FAIL: %s\n' "$*" >&2; exit "${2:-2}"; }
 export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
 export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.30}"
 
-# --- 0. Sanity check + auto-install of scalpel from the mounted tree --------
+# --- 0. Sanity check + editable install of scalpel from the mounted tree ----
 # On CodeOcean and other build-from-repo platforms the Dockerfile installs
 # the dependency stack at image-build time, but the repo (containing
-# scalpel/) is only mounted at runtime under /code. This block does an
-# editable install on first run so reproduce.sh works whether scalpel is
-# already importable (local dev) or only the source tree is present
-# (CodeOcean, fresh Docker container).
+# scalpel/) is only mounted at runtime under /code. We always do an
+# editable install up front so every sub-script can import scalpel
+# regardless of its working directory. (An earlier version checked
+# 'python3 -c "import scalpel"' from the script's cwd, but that succeeded
+# when cwd happened to be the repo root via Python's sys.path[0]="" rule
+# and silently failed for sub-scripts launched as 'python3 path/to/x.py',
+# whose sys.path[0] is the script's directory rather than the repo root.)
 log "Python: $(command -v python3 || fail 'python3 not on PATH')"
-if ! python3 -c 'import scalpel' 2>/dev/null; then
-  log "scalpel not yet importable; installing from ${ROOT} in editable mode..."
-  python3 -m pip install --no-cache-dir -e "${ROOT}" \
-    || fail "pip install -e ${ROOT} failed; check pyproject.toml and base image"
-fi
-python3 -c 'import scalpel; print("scalpel", scalpel.__version__)' \
-  || fail "scalpel still not importable after install; check pyproject.toml"
+log "Installing scalpel in editable mode from ${ROOT}..."
+python3 -m pip install --no-cache-dir --quiet -e "${ROOT}" \
+  || fail "pip install -e ${ROOT} failed; check pyproject.toml and base image"
+# Verify the install from a directory that is NOT a parent of scalpel/,
+# so a cwd-relative import cannot mask a missing install.
+(cd / && python3 -c 'import scalpel; print("scalpel", scalpel.__version__)') \
+  || fail "scalpel still not importable from cwd=/ after install; check pyproject.toml"
 
 # --- 1. Class-dependent feasibility (Figure 2) -------------------------------
 log "Class-dependent feasibility sweeps (Figure 2)..."
