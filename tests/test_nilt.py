@@ -79,8 +79,12 @@ class TestNILTBatched:
 
     @pytest.fixture(params=["jax", "torch"])
     def backend(self, request):
-        from scalpel.backends import get_backend
-        return get_backend(request.param)
+        pytest.importorskip(request.param)
+        try:
+            from scalpel.backends import get_backend
+            return get_backend(request.param)
+        except (ImportError, ModuleNotFoundError) as e:
+            pytest.skip(f"{request.param} backend unavailable: {e}")
 
     def test_single_mode_matches_scalar(self, backend):
         """Batched NILT with shape (1, 1, N) should match scalar NILT."""

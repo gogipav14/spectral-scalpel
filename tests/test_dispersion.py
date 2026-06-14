@@ -11,8 +11,12 @@ from scalpel.core.dispersion import (
 
 @pytest.fixture(params=["jax", "torch"])
 def backend(request):
-    from scalpel.backends import get_backend
-    return get_backend(request.param)
+    pytest.importorskip(request.param)
+    try:
+        from scalpel.backends import get_backend
+        return get_backend(request.param)
+    except (ImportError, ModuleNotFoundError) as e:
+        pytest.skip(f"{request.param} backend unavailable: {e}")
 
 
 class TestSafeSqrt:
