@@ -9,7 +9,7 @@
 #
 # GPU paths are documented but not exercised in CI (no GPU-enabled GitHub
 # runner). They are validated locally on the RTX 5060 development workstation
-# and the wall-clock numbers in paper_toms/data/benchmark_multi_backend.csv
+# and the wall-clock numbers in reproducibility/data/benchmark_multi_backend.csv
 # are the GPU baseline.
 
 name: CI
@@ -92,13 +92,15 @@ jobs:
           # Run the spot-check and let it fail loudly if reproduce.sh
           # itself errors out or csv_diff finds rows outside tolerance.
           # The TOLERANCE knob (above) is the lever for runner noise.
-          bash paper_toms/reproducibility/reproduce.sh
+          bash reproducibility/reproduce.sh
       - name: Upload regenerated artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: repro-artifacts
-          path: reports/repro_run/
+          path: |
+            reproducibility/regen/
+            reproducibility/figures/
           if-no-files-found: ignore
 
   lint:
