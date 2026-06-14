@@ -8,7 +8,7 @@ authors:
     given-names: Gorgi
     email: gop214@lehigh.edu
     affiliation: "Chemical and Biomolecular Engineering and Bioengineering, Lehigh University"
-    orcid: "https://orcid.org/0009-0008-9716-9530"
+    orcid: "https://orcid.org/0000-0003-3205-6909"
 license: Apache-2.0
 url: "https://doi.org/10.5281/zenodo.20682437"
 repository-code: "https://doi.org/10.5281/zenodo.20682437"
@@ -28,7 +28,7 @@ preferred-citation:
       given-names: Gorgi
       email: gop214@lehigh.edu
       affiliation: "Lehigh University"
-      orcid: "https://orcid.org/0009-0008-9716-9530"
+      orcid: "https://orcid.org/0000-0003-3205-6909"
   title: "scalpel: A multi-backend FFT-NILT primitive for spectral slab PDE solvers, with class-dependent finite-precision auto-tuning"
   journal: "ACM Transactions on Mathematical Software"
   year: 2026
