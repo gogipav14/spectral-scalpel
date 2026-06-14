@@ -63,6 +63,8 @@ class TestEngine1D:
 
     def test_backend_parity_engine(self):
         """JAX and PyTorch engines produce identical fields."""
+        pytest.importorskip("jax")
+        pytest.importorskip("torch")
         from scalpel.backends import get_backend
 
         sigma = 0.01

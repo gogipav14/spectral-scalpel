@@ -134,6 +134,8 @@ class TestNILTBatched:
 
     def test_backend_parity(self):
         """JAX and PyTorch produce the same results."""
+        pytest.importorskip("jax")
+        pytest.importorskip("torch")
         from scalpel.backends import get_backend
 
         a, T, N = 0.01, 5.0, 256
