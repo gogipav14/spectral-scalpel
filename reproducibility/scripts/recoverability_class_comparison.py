@@ -37,7 +37,10 @@ DATA = os.path.join(REPRO_ROOT, "data")
 # local "refresh the archive" workflows; reproduce.sh overrides to
 # reproducibility/regen for clean RCR runs.
 REGEN = os.environ.get("REGEN_DIR", DATA)
-OUT = os.path.join(REPRO_ROOT, "figures")
+# FIGURES_DIR is set by reproduce.sh to /results/figures on
+# CodeOcean (so the snapshot timeline captures the PNG) and to
+# reproducibility/figures/ for local dev.
+OUT = os.environ.get("FIGURES_DIR", os.path.join(REPRO_ROOT, "figures"))
 os.makedirs(OUT, exist_ok=True)
 os.makedirs(REGEN, exist_ok=True)
 

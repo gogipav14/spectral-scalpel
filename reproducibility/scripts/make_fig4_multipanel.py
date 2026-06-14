@@ -25,7 +25,10 @@ import matplotlib.pyplot as plt
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPRO_ROOT = os.path.abspath(os.path.join(HERE, ".."))
 DATA = os.path.join(REPRO_ROOT, "data")
-OUT_DIR = os.path.join(REPRO_ROOT, "figures")
+# FIGURES_DIR is set by reproduce.sh to /results/figures on
+# CodeOcean (so the snapshot timeline captures the PNG) and to
+# reproducibility/figures/ for local dev.
+OUT_DIR = os.environ.get("FIGURES_DIR", os.path.join(REPRO_ROOT, "figures"))
 os.makedirs(OUT_DIR, exist_ok=True)
 
 MU_0 = 4e-7 * math.pi

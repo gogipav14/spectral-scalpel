@@ -43,13 +43,22 @@ ROOT="$(cd "${REPRO_ROOT}/.." && pwd)"
 DATA="${REPRO_ROOT}/data"
 SCRIPTS="${REPRO_ROOT}/scripts"
 BASELINES="${REPRO_ROOT}/baselines"
-FIG="${REPRO_ROOT}/figures"
-# REGEN is where freshly regenerated CSVs land so csv_diff has both
-# sides (archive in DATA, fresh in REGEN). Without this separation,
-# scripts would overwrite the archive and csv_diff would trivially
-# self-compare. Local "refresh the archive" workflows can opt out by
-# setting REGEN_DIR=$DATA before invoking reproduce.sh.
-export REGEN_DIR="${REGEN_DIR:-${REPRO_ROOT}/regen}"
+
+# CodeOcean convention: only files under /results land in the
+# Reproducible Run timeline snapshot. If we are running under
+# CodeOcean (writable /results exists), route regenerated CSVs and
+# figures there so they get captured. Otherwise default to in-tree
+# gitignored dirs for local dev.
+if [[ -d /results && -w /results ]]; then
+  REPRO_OUT="/results"
+  log_dest="/results (CodeOcean snapshot)"
+else
+  REPRO_OUT="${REPRO_ROOT}"
+  log_dest="${REPRO_ROOT}/{regen,figures}"
+fi
+export REGEN_DIR="${REGEN_DIR:-${REPRO_OUT}/regen}"
+export FIGURES_DIR="${FIGURES_DIR:-${REPRO_OUT}/figures}"
+FIG="${FIGURES_DIR}"
 DIFF_OUT="${REGEN_DIR}/diff_report.txt"
 mkdir -p "${FIG}" "${REGEN_DIR}"
 # Wipe stale regen state so a partial previous run does not pollute
@@ -139,6 +148,7 @@ echo
 
 if [[ "${DIFF_EXIT}" == "0" ]]; then
   log "All quantitative claims reproduce within ${TOL} tolerance."
+  log "Outputs:    ${log_dest}"
   log "Figures:    ${FIG}/"
   log "Diff log:   ${DIFF_OUT}"
   exit 0
