@@ -289,8 +289,14 @@ def safe_run(name, fn):
     try:
         return fn()
     except Exception as exc:
+        # Print a one-line failure summary; the full traceback is too
+        # noisy when (e.g.) JAX-CUDA init fails on CodeOcean and we
+        # already know we want to fall through to the remaining
+        # backends. Re-enable with BENCH_VERBOSE_ERRORS=1 if you want
+        # the traceback for debugging.
         print(f"  ! {name} FAILED: {exc.__class__.__name__}: {exc}")
-        traceback.print_exc()
+        if os.environ.get("BENCH_VERBOSE_ERRORS"):
+            traceback.print_exc()
         return float("nan")
 
 
@@ -410,15 +416,37 @@ results.append(("JAX CPU", "ftcs_l1", fl_ms))
 
 # 6. JAX GPU (inline; CUDA initialization cost goes here)
 print("\n--- JAX GPU ---")
-try:
+
+
+def _jax_cuda_available():
+    """Probe: does the JAX install actually expose a CUDA device?
+
+    On some platforms (e.g. CodeOcean's PyTorch base image paired with
+    jax[cuda12] wheels) JAX detects CUDA at import time but the
+    stream-executor initialization fails at first device access with
+    CUDA_ERROR_INVALID_VALUE. Probing here lets us print a single
+    diagnostic line and skip cleanly instead of throwing a
+    multi-page traceback per timing call.
+    """
+    try:
+        import jax  # noqa: F401
+    except Exception:
+        return False, "jax not installed"
+    try:
+        devs = jax.devices("gpu")
+    except Exception as exc:
+        return False, f"{exc.__class__.__name__}: {exc}"
+    return bool(devs), "no GPU devices" if not devs else ""
+
+
+_ok, _reason = _jax_cuda_available()
+if not _ok:
+    print(f"  JAX GPU unavailable on this platform; skipping ({_reason})")
+    print("  (the JAX CPU subprocess sidecar above covers JAX's CPU path)")
+    sc_ms = fl_ms = float("nan")
+else:
     sc_ms = safe_run("scalpel", lambda: run_scalpel_jax(device="gpu"))
     fl_ms = safe_run("ftcs+l1", lambda: run_ftcs_l1_jax(device="gpu"))
-except ImportError:
-    print("  jax not installed; skipping")
-    sc_ms = fl_ms = float("nan")
-except RuntimeError as e:
-    print(f"  JAX GPU device unavailable: {e}")
-    sc_ms = fl_ms = float("nan")
 print(f"  scalpel: {sc_ms:.1f} ms | FTCS+L1: {fl_ms:.0f} ms")
 results.append(("JAX GPU", "scalpel", sc_ms))
 results.append(("JAX GPU", "ftcs_l1", fl_ms))

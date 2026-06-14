@@ -25,7 +25,17 @@ def levy_shifted(t, d, D, kperp_sq):
     return out
 
 
-backend = get_backend()
+import os
+# Spectral-convergence audit is a 1D heat-equation sweep with an
+# analytical reference; it does not need a GPU and should not bring
+# CUDA into the loop. The previous code called get_backend() with no
+# argument, which on a fresh image picks whichever Array-API frontend
+# is first in the auto-detect order (typically jax); on platforms
+# where JAX-CUDA initialization fails (e.g. CodeOcean's PyTorch base
+# vs jax[cuda12] wheel layout, see REPRODUCE.md known issues),
+# the entire convergence figure regenerator crashed at import.
+# Honor CONV_BACKEND if set, otherwise default to numpy.
+backend = get_backend(os.environ.get("CONV_BACKEND", "numpy"))
 print(f"Backend: {backend.name}")
 
 D = 1e-4
