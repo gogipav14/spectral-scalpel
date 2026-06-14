@@ -56,10 +56,21 @@ fail() { printf '[reproduce] FAIL: %s\n' "$*" >&2; exit "${2:-2}"; }
 export XLA_PYTHON_CLIENT_PREALLOCATE="${XLA_PYTHON_CLIENT_PREALLOCATE:-false}"
 export XLA_PYTHON_CLIENT_MEM_FRACTION="${XLA_PYTHON_CLIENT_MEM_FRACTION:-0.30}"
 
-# --- 0. Sanity check ---------------------------------------------------------
+# --- 0. Sanity check + auto-install of scalpel from the mounted tree --------
+# On CodeOcean and other build-from-repo platforms the Dockerfile installs
+# the dependency stack at image-build time, but the repo (containing
+# scalpel/) is only mounted at runtime under /code. This block does an
+# editable install on first run so reproduce.sh works whether scalpel is
+# already importable (local dev) or only the source tree is present
+# (CodeOcean, fresh Docker container).
 log "Python: $(command -v python3 || fail 'python3 not on PATH')"
+if ! python3 -c 'import scalpel' 2>/dev/null; then
+  log "scalpel not yet importable; installing from ${ROOT} in editable mode..."
+  python3 -m pip install --no-cache-dir -e "${ROOT}" \
+    || fail "pip install -e ${ROOT} failed; check pyproject.toml and base image"
+fi
 python3 -c 'import scalpel; print("scalpel", scalpel.__version__)' \
-  || fail "scalpel not importable. From the repo root: pip install -e ."
+  || fail "scalpel still not importable after install; check pyproject.toml"
 
 # --- 1. Class-dependent feasibility (Figure 2) -------------------------------
 log "Class-dependent feasibility sweeps (Figure 2)..."
