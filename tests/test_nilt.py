@@ -49,7 +49,8 @@ class TestNILTScalar:
         # alpha_c = -0.5
         a, T, N = 0.01, 20.0, 2048
 
-        F = lambda s: second_order_F(s, omega_n, zeta)
+        def F(s):
+            return second_order_F(s, omega_n, zeta)
         f, t, z_ifft = nilt_scalar(F, a, T, N)
 
         mask = (t > 0.1) & (t <= 20.0)

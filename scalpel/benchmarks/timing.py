@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import time
 import numpy as np
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ..backends import get_backend
 from ..core.engine import SpectralEngine, GridParams, NILTParams

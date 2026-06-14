@@ -64,7 +64,8 @@ def mol_column_1d(
     if inlet_fn is None:
         # Approximate delta: inject for one time step
         pulse_dt = dz / v
-        inlet_fn = lambda t: 1.0 / pulse_dt if t < pulse_dt else 0.0
+        def inlet_fn(t):
+            return 1.0 / pulse_dt if t < pulse_dt else 0.0
 
     def rhs(t, C):
         dCdt = np.zeros(Nz)
@@ -141,7 +142,8 @@ def mol_column_2d(
 
     if inlet_fn is None:
         pulse_dt = dz / v
-        inlet_fn = lambda t: 1.0 / pulse_dt if t < pulse_dt else 0.0
+        def inlet_fn(t):
+            return 1.0 / pulse_dt if t < pulse_dt else 0.0
 
     def rhs(t, C_flat):
         C = C_flat.reshape(Nr, Nz)

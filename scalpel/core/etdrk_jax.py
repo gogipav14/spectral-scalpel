@@ -68,7 +68,7 @@ def integrate_strang_jit(
     exp_half_u = jnp.exp(Du * lap_eig * dt / 2)
     exp_half_v = jnp.exp(Dv * lap_eig * dt / 2)
 
-    n_saves = n_steps // save_every + 1
+    n_steps // save_every + 1
     Nx, Ny = u0.shape
 
     def step(carry, _):

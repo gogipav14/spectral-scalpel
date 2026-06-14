@@ -1,9 +1,8 @@
 """Tests for chromatography system: spectral vs MOL reference."""
 
 import numpy as np
-import pytest
 
-from scalpel.systems.chromatography import ColumnParams, get_column
+from scalpel.systems.chromatography import get_column
 from scalpel.reference.mol_column import mol_column_1d
 
 

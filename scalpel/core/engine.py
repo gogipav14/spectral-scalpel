@@ -12,6 +12,8 @@ import math
 from dataclasses import dataclass
 from typing import Callable
 
+import numpy as np
+
 from ..backends import get_backend
 from .nilt import bromwich_contour, nilt_inverse
 

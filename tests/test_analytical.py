@@ -16,11 +16,10 @@ Two test strategies:
 
 import numpy as np
 import pytest
-import math
 
 from scalpel.core.engine import SpectralEngine, GridParams, NILTParams
 from scalpel.core.dispersion import diffusion
-from scalpel.core.nilt import bromwich_contour, nilt_inverse, nilt_scalar
+from scalpel.core.nilt import nilt_scalar
 
 
 # --- Analytical solution ---
@@ -171,8 +170,8 @@ class TestPerModeAnalytical:
         nilt_p = NILTParams(a=0.01, T=5.0, N=1024)
 
         # Source: cos(2π·x/Lx) — fundamental mode only
-        Lx, Ly = Nx * dx, Ny * dy
-        n0, n1 = 1, 0  # fundamental x-mode, uniform in y
+        Lx, _Ly = Nx * dx, Ny * dy
+        n0, _n1 = 1, 0  # fundamental x-mode, uniform in y
         k0 = 2 * np.pi * n0 / Lx
         kperp_sq = k0**2  # only x-mode contributes
 
@@ -258,7 +257,7 @@ class TestGaussianSourceAnalytical:
 
         Nx, Ny = 64, 64
         dx = dy = 0.001
-        Lx, Ly = Nx * dx, Ny * dy
+        _Lx, _Ly = Nx * dx, Ny * dy
         grid = GridParams(Nx=Nx, Ny=Ny, dx=dx, dy=dy)
         nilt_p = NILTParams(a=0.01, T=2.0, N=512)
 
@@ -367,7 +366,7 @@ class TestScalarNILTvsAnalytical:
 
         D = 1e-4
         d = 0.01
-        a_levy = d / np.sqrt(D)  # = 1.0
+        d / np.sqrt(D)  # = 1.0
 
         def F(s):
             gamma = cmath.sqrt(s / D)

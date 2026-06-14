@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-import math
 
 from scalpel.core.engine import SpectralEngine, GridParams, NILTParams
 from scalpel.core.dispersion import maxwell_lossy, MU_0, EPS_0
@@ -38,7 +37,7 @@ class TestEngine1D:
         field, t = engine.forward(source, depth, grid, nilt_params)
 
         field_np = backend.to_numpy(field[0, 0, :])
-        t_np = backend.to_numpy(t)
+        backend.to_numpy(t)
 
         # Scalar NILT reference: F(s) = exp(-gamma(s) * d)
         def F_scalar(s):

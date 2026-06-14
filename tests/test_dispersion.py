@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-import math
 
 from scalpel.core.dispersion import (
     maxwell_lossy, damped_acoustic, convection_diffusion_cylindrical,

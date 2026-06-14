@@ -1,9 +1,7 @@
 """Tests for CFL feasibility checking."""
 
-import numpy as np
-import pytest
 
-from scalpel.core.feasibility import tune_params, check_feasibility, TunedParams
+from scalpel.core.feasibility import tune_params, check_feasibility
 
 
 class TestTuneParams:

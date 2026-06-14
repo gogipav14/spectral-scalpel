@@ -1,7 +1,6 @@
 """Tests for the quasi-discrete Hankel transform."""
 
 import numpy as np
-import pytest
 from scipy.special import j0
 
 from scalpel.core.hankel import HankelTransform

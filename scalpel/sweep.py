@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import itertools
 import time
-from dataclasses import dataclass, field
-from typing import Any, Callable, Iterable, Optional
+from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 

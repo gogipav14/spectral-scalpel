@@ -97,12 +97,12 @@ def fdtd_3d_slab(
     # Update coefficients for lossy dielectric
     # E update: exponential time-stepping for sigma term
     c1 = (1 - sigma*dt/(2*epsilon)) / (1 + sigma*dt/(2*epsilon))
-    c2x = (dt/(epsilon*dx)) / (1 + sigma*dt/(2*epsilon))
+    (dt/(epsilon*dx)) / (1 + sigma*dt/(2*epsilon))
     c2y = (dt/(epsilon*dy)) / (1 + sigma*dt/(2*epsilon))
     c2z = (dt/(epsilon*dz)) / (1 + sigma*dt/(2*epsilon))
 
     # H update (lossless magnetic)
-    c3x = dt / (MU_0 * dx)
+    dt / (MU_0 * dx)
     c3y = dt / (MU_0 * dy)
     c3z = dt / (MU_0 * dz)
 

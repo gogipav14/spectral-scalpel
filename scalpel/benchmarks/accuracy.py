@@ -9,7 +9,6 @@ from dataclasses import dataclass
 
 from ..backends import get_backend
 from ..core.engine import SpectralEngine, GridParams, NILTParams
-from ..core.nilt import nilt_scalar
 
 
 @dataclass

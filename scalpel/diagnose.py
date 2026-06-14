@@ -193,7 +193,6 @@ def run_and_report(
     # this introspection wrapper thin and the engine fully tested.
     import time
 
-    from . import api
 
     t0 = time.perf_counter()
 

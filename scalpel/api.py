@@ -7,9 +7,7 @@ relations for each physics system.
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
-from typing import Optional
 
 from .backends import get_backend
 from .core.engine import SpectralEngine, GridParams, NILTParams

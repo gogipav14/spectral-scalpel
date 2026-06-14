@@ -19,7 +19,6 @@ import numpy as np
 import pytest
 
 from scalpel.core.dispersion import elastic_pwave, elastic_swave
-from scalpel.core.engine import GridParams, NILTParams
 from scalpel.core.feasibility import tune_params, refine_until_accept
 from scalpel.core.nilt import nilt_scalar
 from scalpel.systems.elastodynamics import MATERIALS

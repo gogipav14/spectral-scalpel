@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import csv
 import os
-import math
 from typing import Optional
 
 import numpy as np
