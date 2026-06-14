@@ -1,29 +1,41 @@
-# CodeOcean-compatible Dockerfile fragment for the spectral-scalpel
-# capsule. Paste the contents of this file into the CodeOcean
-# environment Dockerfile editor, REPLACING whatever the wizard
-# auto-generated. The FROM line below uses the CodeOcean PyTorch
-# CUDA 12.4 base image, which satisfies CodeOcean's "Only base
-# Docker images from Code Ocean are supported" requirement and gives
-# us CUDA 12.4 + cuDNN + Python 3.12.4 + PyTorch 2.4.0 pre-installed.
+# CodeOcean reference Dockerfile for the spectral-scalpel capsule.
 #
-# Capsule wizard prerequisite: pick the
-#   PyTorch (2.4.0, CUDA 12.4.0, Mambaforge24.5.0-0, Python3.12.4, Ubuntu22.04)
-# starter, NOT the Ubuntu Linux with GPU support starter (which is
-# CUDA 11.7 and predates our JAX / CuPy wheels).
+# IMPORTANT: CodeOcean's environment editor is wizard-controlled, NOT
+# free-form. Pasting this file into the Dockerfile editor will only
+# preserve the FROM line; RUN / ENV / CMD lines get clobbered on the
+# next rebuild because the wizard regenerates the Dockerfile from the
+# "Packages" sidebar panels. The build log will look like
+#     [1/1] FROM registry.codeocean.com/codeocean/pytorch:...
+# (single instruction, no pip install layer) and the run will fail
+# with ModuleNotFoundError on matplotlib, jax, etc.
+#
+# Correct setup on CodeOcean:
+#   1. Starter image: PyTorch (2.4.0, CUDA 12.4.0, Mambaforge24.5.0-0,
+#      Python3.12.4, Ubuntu22.04). Pick from Starter Environments.
+#   2. Software sidebar -> Pip Packages, add the entries listed in the
+#      pip-packages section below. Each on its own line, no version
+#      pin necessary unless CodeOcean's cached wheels are stale.
+#   3. Software sidebar -> Apt Packages, leave empty (the base image
+#      already provides build-essential, git, etc.).
+#   4. Environment Variables panel, add (only for full GPU run):
+#        ENABLE_GPU=1
+#        XLA_PYTHON_CLIENT_PREALLOCATE=false
+#        XLA_PYTHON_CLIENT_MEM_FRACTION=0.30
+#   5. Master script: reproducibility/reproduce.sh (set via the file
+#      browser's "Set as File to Run" menu).
+#   6. Click Save / Build, then Reproducible Run.
+#
+# This file is a REFERENCE for what the CodeOcean wizard should
+# produce after the above steps. It is also runnable locally
+# outside CodeOcean.
 
 FROM registry.codeocean.com/codeocean/pytorch:2.4.0-cuda12.4.0-mambaforge24.5.0-0-python3.12.4-ubuntu22.04
 
-# JAX VRAM hygiene defaults (so JAX, PyTorch CUDA, and CuPy can
-# coexist on a single GPU without JAX preallocating the entire VRAM).
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=false
 ENV XLA_PYTHON_CLIENT_MEM_FRACTION=0.30
 
-# Install the scientific Python stack + JAX CUDA 12 + CuPy CUDA 12
-# variants on top of the CodeOcean PyTorch base image. PyTorch itself
-# is already installed and CUDA-aware; we only add what the base does
-# not ship. We pin CUDA-12 wheels here (the local-development
-# pyproject.toml pins CUDA-13 wheels for the user's RTX 5060
-# workstation; this Dockerfile is the CodeOcean-side override).
+# pip packages: paste each of these into the CodeOcean Pip Packages
+# UI panel as separate entries.
 RUN python -m pip install --no-cache-dir \
         "numpy>=1.24" \
         "scipy>=1.10" \
@@ -33,10 +45,5 @@ RUN python -m pip install --no-cache-dir \
         "matplotlib>=3.7" \
         "pytest>=7.0" \
         "pytest-xdist"
-
-# CodeOcean mounts the capsule's linked GitHub repository under
-# /code at runtime (not at build). reproduce.sh detects this and
-# installs the spectral-scalpel package in editable mode from /code
-# on first invocation, so no COPY / pip install -e is needed here.
 
 CMD ["bash", "/code/reproducibility/reproduce.sh"]

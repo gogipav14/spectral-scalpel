@@ -44,8 +44,19 @@ DATA="${REPRO_ROOT}/data"
 SCRIPTS="${REPRO_ROOT}/scripts"
 BASELINES="${REPRO_ROOT}/baselines"
 FIG="${REPRO_ROOT}/figures"
-DIFF_OUT="${DATA}/diff_report.txt"
-mkdir -p "${FIG}"
+# REGEN is where freshly regenerated CSVs land so csv_diff has both
+# sides (archive in DATA, fresh in REGEN). Without this separation,
+# scripts would overwrite the archive and csv_diff would trivially
+# self-compare. Local "refresh the archive" workflows can opt out by
+# setting REGEN_DIR=$DATA before invoking reproduce.sh.
+export REGEN_DIR="${REGEN_DIR:-${REPRO_ROOT}/regen}"
+DIFF_OUT="${REGEN_DIR}/diff_report.txt"
+mkdir -p "${FIG}" "${REGEN_DIR}"
+# Wipe stale regen state so a partial previous run does not pollute
+# the next diff (but only if REGEN_DIR is a regen dir, never DATA).
+if [[ "${REGEN_DIR}" != "${DATA}" ]]; then
+  find "${REGEN_DIR}" -maxdepth 1 -type f -name "*.csv" -delete 2>/dev/null || true
+fi
 
 log()  { printf '[reproduce] %s\n' "$*"; }
 warn() { printf '[reproduce] WARN: %s\n' "$*" >&2; }
@@ -114,7 +125,7 @@ python3 "${SCRIPTS}/make_fig4_multipanel.py" \
 log "Diffing regenerated CSVs against archive (tolerance=${TOL})..."
 python3 "${SCRIPTS}/csv_diff.py" \
   --archive "${DATA}" \
-  --regen   "${DATA}" \
+  --regen   "${REGEN_DIR}" \
   --tolerance "${TOL}" \
   --skip-missing \
   -v \

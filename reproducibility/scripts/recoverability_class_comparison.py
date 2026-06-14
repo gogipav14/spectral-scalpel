@@ -32,8 +32,14 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPRO_ROOT = os.path.abspath(os.path.join(HERE, ".."))
 DATA = os.path.join(REPRO_ROOT, "data")
+# REGEN dir is where freshly produced CSVs land so csv_diff can
+# compare them against the archive in DATA. Defaults to DATA for
+# local "refresh the archive" workflows; reproduce.sh overrides to
+# reproducibility/regen for clean RCR runs.
+REGEN = os.environ.get("REGEN_DIR", DATA)
 OUT = os.path.join(REPRO_ROOT, "figures")
 os.makedirs(OUT, exist_ok=True)
+os.makedirs(REGEN, exist_ok=True)
 
 # Load the previously-computed sweep results
 with open(os.path.join(DATA, "precision_scaling_data.pkl"), "rb") as f:
@@ -115,7 +121,7 @@ print(f"Parabolic predicted ratio: {par_pred['L_64'] / max(par_pred['L_32'], 1e-
 print(f"Parabolic empirical ratio: {par_emp['L_64'] / max(par_emp['L_32'], 1e-10):.3f}x")
 
 # CSV
-out_csv = os.path.join(DATA, "recoverability_class_comparison.csv")
+out_csv = os.path.join(REGEN, "recoverability_class_comparison.csv")
 with open(out_csv, "w") as f:
     f.write("class,precision,L,k_perp_predicted,k_perp_empirical\n")
     f.write(f"hyperbolic,float64,{L_FLOAT64},{hyp_pred['L_64']:.4f},{hyp_emp['L_64']:.4f}\n")

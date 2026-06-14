@@ -32,11 +32,14 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPRO_ROOT = os.path.abspath(os.path.join(HERE, ".."))
 DATA = os.path.join(REPRO_ROOT, "data")
-os.makedirs(DATA, exist_ok=True)
+# Honor REGEN_DIR so summary CSVs land in regen/ for diff against
+# the archive instead of overwriting the archive in data/.
+REGEN = os.environ.get("REGEN_DIR", DATA)
+os.makedirs(REGEN, exist_ok=True)
 INNER = os.path.join(HERE, "benchmark_fractional_heat_3d_all_backends.py")
 INNER_CSV = os.path.join(HERE, "benchmark_fractional_heat_3d_all_backends.csv")
-OUT_LONG = os.path.join(DATA, "benchmark_repeated_long.csv")
-OUT_SUMMARY = os.path.join(DATA, "benchmark_repeated_summary.csv")
+OUT_LONG = os.path.join(REGEN, "benchmark_repeated_long.csv")
+OUT_SUMMARY = os.path.join(REGEN, "benchmark_repeated_summary.csv")
 
 
 def parse_inner_csv() -> list:

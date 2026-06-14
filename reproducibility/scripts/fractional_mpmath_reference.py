@@ -116,8 +116,11 @@ for n_nilt in (2048, 4096):
 # ---------------------------------------------------------------------------
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _REPRO_DATA = os.path.abspath(os.path.join(_HERE, "..", "data"))
-os.makedirs(_REPRO_DATA, exist_ok=True)
-out_csv = os.path.join(_REPRO_DATA, "fractional_mpmath_reference.csv")
+# Honor REGEN_DIR so reproduce.sh can land regenerated CSVs in a
+# fresh regen/ tree rather than overwriting the archive in data/.
+_REGEN = os.environ.get("REGEN_DIR", _REPRO_DATA)
+os.makedirs(_REGEN, exist_ok=True)
+out_csv = os.path.join(_REGEN, "fractional_mpmath_reference.csv")
 rows = []
 for n_nilt in (2048, 4096):
     field, t_arr = scalpel_1d(n_nilt)

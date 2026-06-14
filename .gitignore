@@ -79,9 +79,11 @@ reports/
 paper_toms/
 scripts/*.png
 scripts/*.pdf
-# Reproducibility regenerated outputs (figures + diff_report) stay
-# local; only the archived inputs in reproducibility/data/ are tracked.
+# Reproducibility regenerated outputs (figures + diff_report + regen
+# CSVs) stay local; only the archived inputs in reproducibility/data/
+# are tracked.
 reproducibility/figures/
+reproducibility/regen/
 reproducibility/data/diff_report.txt
 
 # --- Third-party copyrighted PDFs (not ours to redistribute) -------------
