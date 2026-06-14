@@ -69,14 +69,20 @@ Thumbs.db
 *~
 
 # --- Repo-local development output (NOT for the public GitHub mirror) ----
-# Per project scoping: the public GitHub repo is the LIBRARY only
-# (scalpel/, tests/, CI, root metadata). The manuscript bundle ships
-# separately via the Zenodo deposit, and development reports stay
-# local. TOMS reviewers get the manuscript via the journal portal.
+# Per project scoping: the public GitHub repo contains the library
+# (scalpel/, tests/, CI, root metadata) PLUS the self-contained
+# reproducibility/ tree that CodeOcean and the RCR re-execution path
+# consume. The manuscript prose (paper_toms/) and development reports
+# (reports/) stay local; the Zenodo deposit mirrors GitHub. TOMS
+# reviewers get the manuscript via the journal portal.
 reports/
 paper_toms/
 scripts/*.png
 scripts/*.pdf
+# Reproducibility regenerated outputs (figures + diff_report) stay
+# local; only the archived inputs in reproducibility/data/ are tracked.
+reproducibility/figures/
+reproducibility/data/diff_report.txt
 
 # --- Third-party copyrighted PDFs (not ours to redistribute) -------------
 1-s2.0-S0009250926004884-main.pdf

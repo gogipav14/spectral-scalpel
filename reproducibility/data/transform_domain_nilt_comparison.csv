@@ -1,0 +1,4 @@
+method,single_mode_ms,full_field_ms,accuracy_note
+FFT-NILT (Dubner-Abate),0.0786,572.8,agrees with de Hoog to relL2=1.19e-05 on convolved response
+de Hoog (1982),0.5841,2651.8,bare-transfer I_1 tail relL2=1.07e-10
+fixed Talbot (2004),3.2068,7559.0,bare-transfer I_1 tail relL2=8.83e-06; N/A on convolved (contour)
